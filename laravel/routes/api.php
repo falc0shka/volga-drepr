@@ -25,18 +25,18 @@ Route::get('/aircraft_airports', function (Request $request) {
 
     $flights = DB::table('flights')
         ->join('aircrafts', 'flights.aircraft_id', '=', 'aircrafts.id')
-        ->select('flights.id','airport_id1', 'airport_id2', 'cargo_offload', 'cargo_load', 'landing', 'takeoff')
+        ->select('flights.id', 'airport_id1', 'airport_id2', 'cargo_offload', 'cargo_load', 'landing', 'takeoff')
         ->where('tail', $request->input('tail'))
         ->get();
 
-    $airports = [];
-
     // Transform flights data to airports array
 
-    foreach ($flights as $index=>$flight) {
+    $airports = [];
+
+    foreach ($flights as $index => $flight) {
 
         $airport = DB::table('airports')
-            ->select('id','code_iata', 'code_icao')
+            ->select('id', 'code_iata', 'code_icao')
             ->where('id', $flight->airport_id1)
             ->first();
 
@@ -44,17 +44,17 @@ Route::get('/aircraft_airports', function (Request $request) {
             "airport_id" => $flight->airport_id1,
             "code_iata" => $airport->code_iata,
             "code_icao" => $airport->code_icao,
-            "cargo_offload" => $flights[$index-1]->cargo_offload ?? 0,
+            "cargo_offload" => $flights[$index - 1]->cargo_offload ?? 0,
             "cargo_load" => $flight->cargo_load,
-            "landing" => $flights[$index-1]->landing ?? 0,
+            "landing" => $flights[$index - 1]->landing ?? 0,
             "takeoff" => $flight->takeoff
         ];
 
-        // Add last airport (IN CONSTRUCTION)
+        // Add last airport
 
         if ($index === count($flights) - 1) {
             $airport = DB::table('airports')
-                ->select('id','code_iata', 'code_icao')
+                ->select('id', 'code_iata', 'code_icao')
                 ->where('id', $flight->airport_id2)
                 ->first();
 
@@ -70,10 +70,12 @@ Route::get('/aircraft_airports', function (Request $request) {
         }
     }
 
+    // Filter airports with given time range
+
     $startDate = strtotime($request->input('date_from'));
     $endDate = strtotime($request->input('date_to'));
 
-    $airports = array_filter($airports, function ($airport) use($startDate, $endDate) {
+    $airports = array_filter($airports, function ($airport) use ($startDate, $endDate) {
         $landingDate = strtotime($airport['landing']);
         $takeoffDate = strtotime($airport['takeoff']);
 
