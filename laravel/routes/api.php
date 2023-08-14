@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,7 +25,8 @@ Route::get('/aircraft_airports', function (Request $request) {
 
     $flights = DB::table('flights')
         ->join('aircrafts', 'flights.aircraft_id', '=', 'aircrafts.id')
-        ->select('flights.id', 'airport_id1', 'airport_id2', 'cargo_offload', 'cargo_load', 'landing', 'takeoff')
+        ->join('airports', 'flights.airport_id1', '=', 'airports.id')
+        ->select('flights.id', 'airport_id1', 'airport_id2', 'cargo_offload', 'cargo_load', 'landing', 'takeoff', 'code_iata', 'code_icao')
         ->where('tail', $request->input('tail'))
         ->get();
 
@@ -35,15 +36,10 @@ Route::get('/aircraft_airports', function (Request $request) {
 
     foreach ($flights as $index => $flight) {
 
-        $airport = DB::table('airports')
-            ->select('id', 'code_iata', 'code_icao')
-            ->where('id', $flight->airport_id1)
-            ->first();
-
         $airports[] = [
             "airport_id" => $flight->airport_id1,
-            "code_iata" => $airport->code_iata,
-            "code_icao" => $airport->code_icao,
+            "code_iata" => $flight->code_iata,
+            "code_icao" => $flight->code_icao,
             "cargo_offload" => $flights[$index - 1]->cargo_offload ?? 0,
             "cargo_load" => $flight->cargo_load,
             "landing" => $flights[$index - 1]->landing ?? 0,
@@ -52,7 +48,7 @@ Route::get('/aircraft_airports', function (Request $request) {
 
         // Add last airport
 
-        if ($index === count($flights) - 1) {
+        if ($index === $flights->count() - 1) {
             $airport = DB::table('airports')
                 ->select('id', 'code_iata', 'code_icao')
                 ->where('id', $flight->airport_id2)
@@ -86,6 +82,6 @@ Route::get('/aircraft_airports', function (Request $request) {
         return false;
     });
 
-    return response()->json($airports);
+    return response()->json(array_values($airports));
 });
 
